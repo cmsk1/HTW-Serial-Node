@@ -1,0 +1,117 @@
+<h5 class="mt-3">Einstellungen:</h5>
+<div class="row" *ngIf="loraSetting">
+  <div class="col-8">
+    <div class="label">Port</div>
+    <div class="input-group input-group-sm">
+      <select class="form-select form-select-sm" [(ngModel)]="selectedPortId" (ngModelChange)="selectPort(selectedPortId)">
+        <option *ngFor="let port of ports" [value]="port.path">{{port.comName}}</option>
+      </select>
+      <button class="btn btn-sm btn-success" (click)="getAllPorts()">Update</button>
+    </div>
+  </div>
+  <div class="col-4">
+  </div>
+  <div class="col-4">
+    <div class="label">Eigene Adresse</div>
+    <div><input class="form-control form-control-sm" type="text" placeholder="z.B. FFFF" [(ngModel)]="loraSetting.address"></div>
+  </div>
+  <div class="col-4">
+    <div class="label">Baud Rate</div>
+    <div>
+      <select class="form-select form-select-sm" [(ngModel)]="loraSetting.baudRate">
+        <option *ngFor="let rate of baudRates" [value]="rate">{{rate}}</option>
+      </select>
+    </div>
+  </div>
+  <div class="col-8">
+    <div class="label">Konfiguration</div>
+    <div><input class="form-control form-control-sm" type="text" placeholder="z.B. FFFF" [(ngModel)]="loraSetting.configString"></div>
+  </div>
+</div>
+<hr>
+<h5>Aktuelle Auswahl:</h5>
+<div class="row" *ngIf="selectedPort">
+  <div class="col-3">
+    <div class="label">COM Name</div>
+    <div>{{selectedPort.comName}}</div>
+  </div>
+  <div class="col-3">
+    <div class="label">COM Hersteller</div>
+    <div>{{selectedPort.manufacturer}}</div>
+  </div>
+  <div class="col-3">
+    <div class="label">PNP ID</div>
+    <div>{{selectedPort.pnpId}}</div>
+  </div>
+  <div class="col-3">
+    <div class="label">Adresse</div>
+    <div>{{loraSetting.address}}</div>
+  </div>
+  <div class="col-3">
+    <div class="label">Baud Rate</div>
+    <div>{{loraSetting.baudRate}}</div>
+  </div>
+  <div class="col-3">
+    <div class="label">Status</div>
+    <div *ngIf="connected === 'CONNECTED'" class="fw-bold text-success">Verbunden</div>
+    <div *ngIf="connected === 'ERROR'" class="fw-bold text-danger">Fehler</div>
+    <div *ngIf="connected === 'CONNECTING'" class="fw-bold text-warning">Verbindet</div>
+    <div *ngIf="connected === 'NOT_CONNECTED'" class="fw-bold text-secondary">Nicht verbunden</div>
+  </div>
+  <div class="col-3">
+    <div class="label">AT Status</div>
+    <div *ngIf="atStatus === 'OK'" class="fw-bold text-success">OK</div>
+    <div *ngIf="atStatus === 'SENDING'" class="fw-bold text-warning">SENDING</div>
+    <div *ngIf="atStatus === 'SENDED'" class="fw-bold text-warning">SENDED</div>
+    <div *ngIf="atStatus === 'CPU_BUSY'" class="fw-bold text-danger">CPU_BUSY</div>
+    <div *ngIf="atStatus === 'RF_BUSY'" class="fw-bold text-danger">RF_BUSY</div>
+    <div *ngIf="atStatus === 'CMD'" class="fw-bold text-danger">CMD</div>
+  </div>
+  <div class="col-12 mt-1">
+    <button *ngIf="connected !== 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="connectToPort()" [disabled]="!loraSetting || loraSetting.configString === '' || loraSetting.address.length <=0 || !selectedPort">Verbinden</button>
+    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-danger" (click)="closePort()">Trennen</button>
+    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkAT()">AT Prüfen</button>
+    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkRSSI()">RSSI Prüfen</button>
+    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkVrr()">Version Prüfen</button>
+  </div>
+</div>
+<hr>
+
+<div class="mb-3">
+  <h5>Chat:</h5>
+  <div class="row">
+    <div class="col">
+      <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
+        <div class="d-block w-100" *ngFor="let item of chat">
+          <div>
+            <div class="bubble py-1 px-3 text-wrap" [ngClass]="{'bubble': (!item.isSend && item.from !== 'SYSTEM' && item.from !== 'INFO'),'bubble-err': (!item.isSend && item.from === 'SYSTEM'),'bubble-info': (!item.isSend && item.from === 'INFO'), 'bubble-self text-end': item.isSend}">{{item.text}}</div>
+            <small class="mb-2 text-secondary small d-block" [ngClass]="{ 'text-end': item.isSend}" style="margin-top: -4px"><span *ngIf="item.from && item.from !== ''">{{item.from}} </span>am {{item.date | date:'dd.MM.yy HH:mm:ss'}}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
+        <pre class="d-block m-0" style="overflow-x: hidden" [ngClass]="{'green-text': rawItem.isSend}" *ngFor="let rawItem of rawData"><span>{{rawItem.date | date:'dd.MM.yy HH:mm:ss'}}</span> - {{rawItem.data}}</pre>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-3">
+      <div class="label">Empfänger</div>
+      <select class="form-select form-select-sm" [(ngModel)]="selectedNode">
+        <option *ngFor="let node of nodes" [value]="nodes">{{node}}</option>
+      </select>
+    </div>
+    <div class="col-12">
+      <div class="label">Nachricht senden</div>
+      <div class="input-group input-group-sm mb-3">
+        <input class="form-control form-control-sm" type="text" placeholder="Text eingeben" [(ngModel)]="inputString" [disabled]="atStatus !== 'OK'">
+        <button class="btn btn-sm btn-success" [ngClass]="{'disabled': atStatus !== 'OK'}" (click)="sendMessageToNode()">Senden</button>
+      </div>
+    </div>
+  </div>
+
+
+</div>
