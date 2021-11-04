@@ -64,6 +64,7 @@ export class ChatComponent implements OnInit {
     this.parser = this.serialPort.pipe(new this.electron.serialPort.parsers.Readline({delimiter: '\r\n'}));
 
     this.serialPort.on('open', () => {
+      console.log(this.selectedPort.path + ' open');
       this.connected = 'CONNECTED';
       this.initAT();
     });
@@ -73,12 +74,17 @@ export class ChatComponent implements OnInit {
     });
 
     this.serialPort.on('data', data => {
+      console.log(this.selectedPort.path + data);
       if (data && data.toString().trim() !== '') {
         this.rawData.push(new RawData(data.toString().trim(), false));
         this.changeDetection.detectChanges();
         this.handleReceivedData(data.toString().trim());
       }
     });
+
+    //const parser = this.serialPort.pipe(new this.electron.serialPort.parsers.Readline({ delimiter: '\r\n' }));
+
+    this.parser.on('data', console.log);
   }
 
   closePort() {
@@ -190,8 +196,12 @@ export class ChatComponent implements OnInit {
   }
 
   initAT() {
-    this.serialWriteMessage('AT');
-    this.changeDetection.detectChanges();
+    setTimeout(() =>
+      {
+        this.serialWriteMessage('AT');
+        this.changeDetection.detectChanges();
+      },
+      1500);
   }
 
   checkRSSI() {
@@ -210,9 +220,13 @@ export class ChatComponent implements OnInit {
   }
 
 
-  parseData(str: string) {
-    return str.replace('AT,','').replace(',OK','');
+  checkRST() {
+    this.serialWriteMessage('AT+RST');
+    this.changeDetection.detectChanges();
   }
 
 
+  parseData(str: string) {
+    return str.replace('AT,','').replace(',OK','');
+  }
 }
