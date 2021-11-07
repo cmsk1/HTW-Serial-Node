@@ -23,6 +23,7 @@ export class ChatComponent implements OnInit {
   baudRates: number[];
   selectedNode: string;
   inputString: string;
+  inputStringRaw: string;
   selectedPortId: string;
   content: string;
   connected: string;
@@ -49,6 +50,7 @@ export class ChatComponent implements OnInit {
     this.chat = [];
     this.rawData = [];
     this.messageToSend = '';
+    this.inputStringRaw = '';
     this.showRaw = false;
     this.addressIsSet = false;
     this.configIsSet = false;
@@ -64,7 +66,6 @@ export class ChatComponent implements OnInit {
     this.parser = this.serialPort.pipe(new this.electron.serialPort.parsers.Readline({delimiter: '\r\n'}));
 
     this.serialPort.on('open', () => {
-      console.log(this.selectedPort.path + ' open');
       this.connected = 'CONNECTED';
       this.initAT();
     });
@@ -73,18 +74,13 @@ export class ChatComponent implements OnInit {
       this.connected = 'NOT_CONNECTED';
     });
 
-    this.serialPort.on('data', data => {
-      console.log(this.selectedPort.path + data);
+    this.parser.on('data', data => {
       if (data && data.toString().trim() !== '') {
         this.rawData.push(new RawData(data.toString().trim(), false));
         this.changeDetection.detectChanges();
         this.handleReceivedData(data.toString().trim());
       }
     });
-
-    //const parser = this.serialPort.pipe(new this.electron.serialPort.parsers.Readline({ delimiter: '\r\n' }));
-
-    this.parser.on('data', console.log);
   }
 
   closePort() {
@@ -122,17 +118,21 @@ export class ChatComponent implements OnInit {
     }
   }
 
+  sendRawMessage() {
+    if (this.inputStringRaw && this.inputStringRaw.trim().length > 0) {
+      this.serialWriteMessage(this.inputStringRaw);
+      this.inputStringRaw = '';
+    }
+  }
+
   handleReceivedData(data: string) {
     if (data && data.length > 0) {
       // Wenn DEST gesetzt und OK,XXXX zurück kommt -> Länge senden
-      if (data.toUpperCase().includes('AT,' + this.selectedNode.trim().toUpperCase() + ',OK')) {
-        if (this.messageToSend !== '') {
-          const tmpString = 'AT+SEND=' + this.messageToSend.trim().length;
-          this.atStatus = ATStatus.SENDING;
-          this.serialWriteMessage(tmpString);
-        } else {
-          this.atStatus = ATStatus.OK;
-        }
+      // eslint-disable-next-line max-len
+      if ((data.toUpperCase().includes('AT,' + this.selectedNode.trim().toUpperCase() + ',OK') || data.toUpperCase().includes('AT,OK')) && this.messageToSend !== '' && this.atStatus !== ATStatus.SENDING) {
+        const tmpString = 'AT+SEND=' + this.messageToSend.trim().length;
+        this.atStatus = ATStatus.SENDING;
+        this.serialWriteMessage(tmpString);
       } else if (data.toUpperCase().includes('AT,OK') && this.atStatus === ATStatus.SENDING) {
         // Wenn länge gesetzt und OK zurück kommt -> Nachricht senden
         const tmpString = this.messageToSend.trim();
@@ -196,8 +196,7 @@ export class ChatComponent implements OnInit {
   }
 
   initAT() {
-    setTimeout(() =>
-      {
+    setTimeout(() => {
         this.serialWriteMessage('AT');
         this.changeDetection.detectChanges();
       },
@@ -227,6 +226,6 @@ export class ChatComponent implements OnInit {
 
 
   parseData(str: string) {
-    return str.replace('AT,','').replace(',OK','');
+    return str.replace('AT,', '').replace(',OK', '');
   }
 }

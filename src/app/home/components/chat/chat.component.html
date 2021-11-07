@@ -79,9 +79,9 @@
 <hr>
 
 <div class="mb-3">
-  <h5>Chat:</h5>
   <div class="row">
     <div class="col">
+      <h5>Chat:</h5>
       <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
         <div class="d-block w-100" *ngFor="let item of chat">
           <div>
@@ -91,28 +91,39 @@
           </div>
         </div>
       </div>
+      <div class="row">
+        <div class="col-3">
+          <div class="label">Empfänger</div>
+          <select class="form-select form-select-sm" [(ngModel)]="selectedNode">
+            <option *ngFor="let node of nodes" [value]="nodes">{{node}}</option>
+          </select>
+        </div>
+        <div class="col-9">
+          <div class="label">Nachricht senden</div>
+          <div class="input-group input-group-sm mb-3">
+            <input class="form-control form-control-sm" type="text" placeholder="Text eingeben" [(ngModel)]="inputString" [disabled]="atStatus !== 'OK'">
+            <button class="btn btn-sm btn-success" [ngClass]="{'disabled': atStatus !== 'OK'}" (click)="sendMessageToNode()">Senden</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="col-4">
+    <div class="col-4 border-start">
+      <h5>RAW Data:</h5>
       <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
         <pre class="d-block m-0" style="overflow-x: hidden" [ngClass]="{'green-text': rawItem.isSend}" *ngFor="let rawItem of rawData"><span>{{rawItem.date | date:'dd.MM.yy HH:mm:ss'}}</span> - {{rawItem.data}}</pre>
       </div>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col-3">
-      <div class="label">Empfänger</div>
-      <select class="form-select form-select-sm" [(ngModel)]="selectedNode">
-        <option *ngFor="let node of nodes" [value]="nodes">{{node}}</option>
-      </select>
-    </div>
-    <div class="col-12">
-      <div class="label">Nachricht senden</div>
-      <div class="input-group input-group-sm mb-3">
-        <input class="form-control form-control-sm" type="text" placeholder="Text eingeben" [(ngModel)]="inputString" [disabled]="atStatus !== 'OK'">
-        <button class="btn btn-sm btn-success" [ngClass]="{'disabled': atStatus !== 'OK'}" (click)="sendMessageToNode()">Senden</button>
+      <div class="row">
+        <div class="col-12">
+          <div class="label">Befehl senden</div>
+          <div class="input-group input-group-sm mb-3">
+            <input class="form-control form-control-sm" type="text" placeholder="Befehl eingeben" [(ngModel)]="inputStringRaw" [disabled]="atStatus !== 'OK'">
+            <button class="btn btn-sm btn-secondary" [ngClass]="{'disabled': atStatus !== 'OK'}" (click)="sendRawMessage()">Senden</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
 
 
 </div>
