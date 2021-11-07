@@ -87,6 +87,12 @@ export class ChatComponent implements OnInit {
     this.serialPort.close();
     this.atStatus = null;
     this.connected = 'NOT_CONNECTED';
+    this.chat = [];
+    this.rawData = [];
+    this.messageToSend = '';
+    this.inputStringRaw = '';
+    this.addressIsSet = false;
+    this.configIsSet = false;
   }
 
   getAllPorts() {
