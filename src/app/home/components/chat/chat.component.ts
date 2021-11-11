@@ -19,7 +19,6 @@ export class ChatComponent implements OnInit {
   chat: ChatItem[];
   lodash = lodash;
   rawData: RawData[];
-  nodes: string[];
   baudRates: number[];
   selectedNode: string;
   inputString: string;
@@ -33,27 +32,22 @@ export class ChatComponent implements OnInit {
   parser: SerialPort.parsers.Delimiter;
   messageToSend: string;
   atStatus: ATStatus;
-  showRaw: boolean;
-  addressIsSet: boolean;
-  configIsSet: boolean;
+
+  nodes: string[];
 
   constructor(private electron: ElectronService, private changeDetection: ChangeDetectorRef) {
-    this.baudRates = [9600, 19200, 28800, 38400, 57600, 76800, 115200];
-    this.loraSetting = new LoraSetting();
-    this.loraSetting.address = '';
-    this.loraSetting.configString = 'CFG=433000000,5,6,12,4,1,0,0,0,0,3000,8,8';
-    this.loraSetting.baudRate = this.baudRates[6];
+    this.loraSetting = new LoraSetting('', 'CFG=433000000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
     this.nodes = [];
-    this.nodes.push('FFFF');
+    this.baudRates = [9600, 19200, 28800, 38400, 57600, 76800, 115200];
+    this.addNote('FFFF');
     this.selectedNode = this.nodes[0];
     this.connected = 'NOT_CONNECTED';
     this.chat = [];
     this.rawData = [];
     this.messageToSend = '';
     this.inputStringRaw = '';
-    this.showRaw = false;
-    this.addressIsSet = false;
-    this.configIsSet = false;
+    this.loraSetting.addressIsSet = false;
+    this.loraSetting.configIsSet = false;
   }
 
   ngOnInit(): void {
@@ -91,8 +85,8 @@ export class ChatComponent implements OnInit {
     this.rawData = [];
     this.messageToSend = '';
     this.inputStringRaw = '';
-    this.addressIsSet = false;
-    this.configIsSet = false;
+    this.loraSetting.addressIsSet = false;
+    this.loraSetting.configIsSet = false;
   }
 
   getAllPorts() {
@@ -149,6 +143,9 @@ export class ChatComponent implements OnInit {
         this.messageToSend = '';
       } else if (data.toUpperCase().includes('AT,SENDED')) {
         this.atStatus = ATStatus.OK;
+      } else if (data.toUpperCase().includes('LR,')) {
+        this.handleIncommingMessage(data);
+
       } else if (data.toUpperCase().includes('CPU_BUSY')) {
         this.atStatus = ATStatus.CPU_BUSY;
         this.chat.push(new ChatItem('CPU ist beschäftigt', 'SYSTEM', false));
@@ -172,12 +169,12 @@ export class ChatComponent implements OnInit {
         this.chat.push(new ChatItem(this.parseData(data), 'INFO', false));
       } else if (data.toUpperCase().includes('AT,OK') && this.messageToSend === '') {
 
-        if (!this.addressIsSet) {
+        if (!this.loraSetting.addressIsSet) {
           this.serialWriteMessage('AT+ADDR=' + this.loraSetting.address);
-          this.addressIsSet = true;
-        } else if (!this.configIsSet) {
+          this.loraSetting.addressIsSet = true;
+        } else if (!this.loraSetting.configIsSet) {
           this.serialWriteMessage('AT+' + this.loraSetting.configString);
-          this.configIsSet = true;
+          this.loraSetting.configIsSet = true;
         } else {
           this.atStatus = ATStatus.OK;
         }
@@ -199,6 +196,19 @@ export class ChatComponent implements OnInit {
         self.changeDetection.detectChanges();
       }
     });
+  }
+
+  handleIncommingMessage(data: string) {
+    const dataArray = data.split(',');
+    if (dataArray && dataArray.length > 3) {
+      // TODO Handle Protocol Data correctly
+
+      const [, sender, length, ...message] = data.split(',');
+      const messageString = message.join(',');
+
+      const chatData = new ChatItem(messageString, dataArray[1], false);
+      this.chat.push(chatData);
+    }
   }
 
   initAT() {
@@ -233,5 +243,23 @@ export class ChatComponent implements OnInit {
 
   parseData(str: string) {
     return str.replace('AT,', '').replace(',OK', '');
+  }
+
+  addNote(addr: string) {
+    if (addr && addr.trim().length > 0) {
+      addr = addr.trim();
+      if (!this.nodes.includes(addr)) {
+        this.nodes.push(addr);
+      }
+    }
+  }
+
+  removeNote(addr: string) {
+    if (addr && addr.trim().length > 0) {
+      addr = addr.trim();
+      if (this.nodes.includes(addr)) {
+        this.nodes = this.nodes.filter(e => e !== addr);
+      }
+    }
   }
 }
