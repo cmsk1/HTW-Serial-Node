@@ -7,6 +7,7 @@ import {ChatItem} from '../../../shared/data/chat-item';
 import {ATStatus} from '../../enums/atstatus';
 import {RawData} from '../../../shared/data/raw-data';
 import * as lodash from 'lodash';
+import {MSG} from "../../../shared/data/header/msg";
 
 @Component({
   selector: 'app-chat',
@@ -110,7 +111,7 @@ export class ChatComponent implements OnInit {
 
   sendMessageToNode() {
     if (this.inputString && this.inputString.trim().length > 0) {
-      const tmpString = 'AT+DEST=' + this.selectedNode.trim();
+      const tmpString = 'AT+DEST=FFFF';
       this.messageToSend = this.inputString;
       this.inputString = '';
       this.chat.push(new ChatItem(this.messageToSend, this.loraSetting.address, true));
@@ -237,6 +238,21 @@ export class ChatComponent implements OnInit {
 
   checkRST() {
     this.serialWriteMessage('AT+RST');
+    this.changeDetection.detectChanges();
+  }
+
+  sendTest() {
+    const msg = new MSG();
+    msg.msg = 'Hello, World';
+    msg.sequence = '44';
+    msg.destAddress = '11';
+    msg.sourceAddress = '10';
+    msg.hopCount = '3';
+    msg.type = '1';
+    msg.flag = '0';
+    msg.hopAddress = '22';
+    //this.serialWriteMessage(msg.toBinaryString());
+    console.log(msg.toBase64String());
     this.changeDetection.detectChanges();
   }
 

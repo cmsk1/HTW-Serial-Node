@@ -74,6 +74,7 @@
     <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkRSSI()">RSSI Prüfen</button>
     <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkVrr()">Version Prüfen</button>
     <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkRST()">RST senden</button>
+    <button class="btn btn-sm me-2 btn-primary" (click)="sendTest()">TEST MSG senden</button>
   </div>
 </div>
 <hr>
