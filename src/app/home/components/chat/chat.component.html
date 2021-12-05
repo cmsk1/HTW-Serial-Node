@@ -10,22 +10,12 @@
     </div>
   </div>
   <div class="col-4">
-  </div>
-  <div class="col-4">
     <div class="label">Eigene Adresse</div>
     <div><input class="form-control form-control-sm" type="text" placeholder="z.B. FFFF" [(ngModel)]="loraSetting.address"></div>
   </div>
-  <div class="col-4">
-    <div class="label">Baud Rate</div>
-    <div>
-      <select class="form-select form-select-sm" [(ngModel)]="loraSetting.baudRate">
-        <option *ngFor="let rate of baudRates" [value]="rate">{{rate}}</option>
-      </select>
-    </div>
-  </div>
-  <div class="col-8">
+  <div class="col-12">
     <div class="label">Konfiguration</div>
-    <div><input class="form-control form-control-sm" type="text" placeholder="z.B. FFFF" [(ngModel)]="loraSetting.configString"></div>
+    <div><input class="form-control form-control-sm" type="text" placeholder="z.B. FFFF" value="{{loraSetting.configString}} | Baud:{{loraSetting.baudRate}}" readonly></div>
   </div>
 </div>
 <hr>
@@ -61,20 +51,15 @@
   <div class="col-3">
     <div class="label">AT Status</div>
     <div *ngIf="atStatus === 'OK'" class="fw-bold text-success">OK</div>
+    <div *ngIf="atStatus === 'WAITING_ACK'" class="fw-bold text-warning">Warte auf Sendebestätigung</div>
     <div *ngIf="atStatus === 'SENDING'" class="fw-bold text-warning">SENDING</div>
     <div *ngIf="atStatus === 'SENDED'" class="fw-bold text-warning">SENDED</div>
-    <div *ngIf="atStatus === 'CPU_BUSY'" class="fw-bold text-danger">CPU_BUSY</div>
-    <div *ngIf="atStatus === 'RF_BUSY'" class="fw-bold text-danger">RF_BUSY</div>
-    <div *ngIf="atStatus === 'CMD'" class="fw-bold text-danger">CMD</div>
+    <div *ngIf="atStatus === 'SYSTEM_ERROR'" class="fw-bold text-danger">System-Fehler</div>
   </div>
   <div class="col-12 mt-1">
     <button *ngIf="connected !== 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="connectToPort()" [disabled]="!loraSetting || loraSetting.configString === '' || loraSetting.address.length <=0 || !selectedPort">Verbinden</button>
     <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-danger" (click)="closePort()">Trennen</button>
     <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkAT()">AT Prüfen</button>
-    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkRSSI()">RSSI Prüfen</button>
-    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkVrr()">Version Prüfen</button>
-    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkRST()">RST senden</button>
-    <button class="btn btn-sm me-2 btn-primary" (click)="sendTest()">TEST MSG senden</button>
   </div>
 </div>
 <hr>
@@ -124,7 +109,5 @@
       </div>
     </div>
   </div>
-
-
 
 </div>

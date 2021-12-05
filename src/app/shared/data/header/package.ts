@@ -1,21 +1,52 @@
-import {BinaryService} from '../../services/binary.service';
-
 export abstract class Package {
-  type: string;
-  flag: string;
-  hopAddress: string;
-  sourceAddress: string;
+  type: number;
+  flag: number;
+  hopAddress: number;
+  prevHopAddress: number;
 
-  baseFromBase64(base64: string): void {
-    const buff = new Buffer(base64, 'base64');
-    const data = buff.toString('utf-8');
-    this.type = BinaryService.binToString(data.slice(0, 3));
-    this.flag = BinaryService.binToString(data.slice(4, 7));
-    this.hopAddress = BinaryService.binToString(data.slice(8, 15));
-    this.sourceAddress = BinaryService.binToString(data.slice(16, 24));
+  constructor() {
+    this.type = 0;
+    this.flag = 0;
+    this.hopAddress = 0;
+    this.prevHopAddress = 0;
   }
 
-  abstract fromBase64(base64: string): void;
+  setProperties(type: number, flags: number, array: number[], msg: string): void {
+    if (msg != null) {
+      const key = 'msg';
+      this[key] = msg.trim();
+    }
+    const newArray = [0].concat(array);
+    for (let i = 0; i < newArray.length; i++) {
+      const key = Object.keys(this)[i];
+      if (key !== 'type' && key !== 'flag' && key !== 'msg') {
+        this[key] = newArray[i];
+      }
+    }
+  }
 
-  abstract toBase64String(): string;
+  toNumberArray(): number[] {
+    const numbers = [];
+    const typeFlag = this.type.toString(2).padStart(4, '0') + this.flag.toString(2).padStart(4, '0');
+    numbers.push(parseInt(typeFlag, 2));
+    for (const [key, value] of Object.entries(this)) {
+      if (key !== 'type' && key !== 'flag' && key !== 'msg') {
+        numbers.push(Number(value));
+      }
+    }
+    return numbers;
+  }
+
+  toBase64String(): string {
+    let rawMsg = '';
+    const msgKey = 'msg';
+    for (const [key, value] of Object.entries(this)) {
+      if (key === msgKey) {
+        rawMsg = value.toString().trim();
+      }
+    }
+    return new Buffer(this.toNumberArray()).toString('base64') + rawMsg;
+  }
+
+
 }

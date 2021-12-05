@@ -7,7 +7,9 @@ import {ChatItem} from '../../../shared/data/chat-item';
 import {ATStatus} from '../../enums/atstatus';
 import {RawData} from '../../../shared/data/raw-data';
 import * as lodash from 'lodash';
-import {MSG} from "../../../shared/data/header/msg";
+import {Package} from '../../../shared/data/header/package';
+import {RoutingTableItem} from '../../../shared/data/routing-table-item';
+import {ReverseRoutingTableItem} from '../../../shared/data/reverse-routing-table-item';
 
 @Component({
   selector: 'app-chat',
@@ -20,7 +22,6 @@ export class ChatComponent implements OnInit {
   chat: ChatItem[];
   lodash = lodash;
   rawData: RawData[];
-  baudRates: number[];
   selectedNode: string;
   inputString: string;
   inputStringRaw: string;
@@ -31,24 +32,24 @@ export class ChatComponent implements OnInit {
   loraSetting: LoraSetting;
   serialPort: SerialPort;
   parser: SerialPort.parsers.Delimiter;
-  messageToSend: string;
   atStatus: ATStatus;
 
   nodes: string[];
 
+  routingTable: RoutingTableItem[];
+  reverseRoutingTable: ReverseRoutingTableItem[];
+
   constructor(private electron: ElectronService, private changeDetection: ChangeDetectorRef) {
     this.loraSetting = new LoraSetting('', 'CFG=433000000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
     this.nodes = [];
-    this.baudRates = [9600, 19200, 28800, 38400, 57600, 76800, 115200];
     this.addNote('FFFF');
     this.selectedNode = this.nodes[0];
     this.connected = 'NOT_CONNECTED';
     this.chat = [];
     this.rawData = [];
-    this.messageToSend = '';
+    this.routingTable = [];
+    this.reverseRoutingTable = [];
     this.inputStringRaw = '';
-    this.loraSetting.addressIsSet = false;
-    this.loraSetting.configIsSet = false;
   }
 
   ngOnInit(): void {
@@ -84,7 +85,6 @@ export class ChatComponent implements OnInit {
     this.connected = 'NOT_CONNECTED';
     this.chat = [];
     this.rawData = [];
-    this.messageToSend = '';
     this.inputStringRaw = '';
     this.loraSetting.addressIsSet = false;
     this.loraSetting.configIsSet = false;
@@ -111,10 +111,9 @@ export class ChatComponent implements OnInit {
 
   sendMessageToNode() {
     if (this.inputString && this.inputString.trim().length > 0) {
-      const tmpString = 'AT+DEST=FFFF';
-      this.messageToSend = this.inputString;
-      this.inputString = '';
-      this.chat.push(new ChatItem(this.messageToSend, this.loraSetting.address, true));
+      const tmpString = 'AT+SEND=' + this.inputString.trim().length;
+      this.atStatus = ATStatus.SENDING;
+      this.chat.push(new ChatItem(this.inputString, this.loraSetting.address, true));
       this.serialWriteMessage(tmpString);
     }
   }
@@ -128,54 +127,37 @@ export class ChatComponent implements OnInit {
 
   handleReceivedData(data: string) {
     if (data && data.length > 0) {
-      // Wenn DEST gesetzt und OK,XXXX zurück kommt -> Länge senden
-      // eslint-disable-next-line max-len
-      if ((data.toUpperCase().includes('AT,' + this.selectedNode.trim().toUpperCase() + ',OK') || data.toUpperCase().includes('AT,OK')) && this.messageToSend !== '' && this.atStatus !== ATStatus.SENDING) {
-        const tmpString = 'AT+SEND=' + this.messageToSend.trim().length;
-        this.atStatus = ATStatus.SENDING;
-        this.serialWriteMessage(tmpString);
-      } else if (data.toUpperCase().includes('AT,OK') && this.atStatus === ATStatus.SENDING) {
-        // Wenn länge gesetzt und OK zurück kommt -> Nachricht senden
-        const tmpString = this.messageToSend.trim();
-        this.serialWriteMessage(tmpString);
-      } else if (data.toUpperCase().includes('AT,SENDING')) {
-        // Wenn Nachricht gesendet und SENDET zurück kommt -> OK
+      if (data.toUpperCase().includes('AT,SENDING')) {
         this.atStatus = ATStatus.SENDED;
-        this.messageToSend = '';
+        this.inputString = '';
       } else if (data.toUpperCase().includes('AT,SENDED')) {
+        // Set Ok on msg sent
         this.atStatus = ATStatus.OK;
       } else if (data.toUpperCase().includes('LR,')) {
+        // Handle incoming packages
         this.handleIncommingMessage(data);
+      } else if (data.toUpperCase().includes('CPU_BUSY') || data.toUpperCase().includes('RF_BUSY')) {
+        // Handle System-Error
+        this.atStatus = ATStatus.SYSTEM_ERROR;
+        setTimeout(() => {
+          this.checkAT();
+        }, 2000);
+      } else if (data.toUpperCase().includes('AT,OK')) {
 
-      } else if (data.toUpperCase().includes('CPU_BUSY')) {
-        this.atStatus = ATStatus.CPU_BUSY;
-        this.chat.push(new ChatItem('CPU ist beschäftigt', 'SYSTEM', false));
-      } else if (data.toUpperCase().includes('RF_BUSY')) {
-        this.atStatus = ATStatus.RF_BUSY;
-        this.chat.push(new ChatItem('RF ist beschäftigt', 'SYSTEM', false));
-      } else if (data.toUpperCase().includes('SYMBLE')) {
-        this.atStatus = ATStatus.SYMBLE;
-        this.chat.push(new ChatItem('Die Daten sind ungültig', 'SYSTEM', false));
-      } else if (data.toUpperCase().includes('PARA')) {
-        this.atStatus = ATStatus.PARA;
-        this.chat.push(new ChatItem('Die Parameter sind ungültig', 'SYSTEM', false));
-      } else if (data.toUpperCase().includes('CMD')) {
-        this.atStatus = ATStatus.CMD;
-        this.chat.push(new ChatItem('Befehlsfehler', 'SYSTEM', false));
-      } else if (data.toUpperCase().includes('AT,-') && data.toUpperCase().includes(',OK')) {
-        this.atStatus = ATStatus.OK;
-        this.chat.push(new ChatItem(this.parseData(data), 'INFO', false));
-      } else if (data.toUpperCase().includes('AT,V') && data.toUpperCase().includes(',OK')) {
-        this.atStatus = ATStatus.OK;
-        this.chat.push(new ChatItem(this.parseData(data), 'INFO', false));
-      } else if (data.toUpperCase().includes('AT,OK') && this.messageToSend === '') {
-
+        // Check initial settings on AT,OK
         if (!this.loraSetting.addressIsSet) {
           this.serialWriteMessage('AT+ADDR=' + this.loraSetting.address);
           this.loraSetting.addressIsSet = true;
         } else if (!this.loraSetting.configIsSet) {
           this.serialWriteMessage('AT+' + this.loraSetting.configString);
           this.loraSetting.configIsSet = true;
+        } else if (!this.loraSetting.broadcastIsSet) {
+          this.serialWriteMessage('AT+DEST=FFFF');
+          this.loraSetting.broadcastIsSet = true;
+        } else if (this.atStatus === ATStatus.SENDING) {
+          // Wenn länge gesetzt und OK zurück kommt -> Nachricht senden
+          const tmpString = this.inputString.trim();
+          this.serialWriteMessage(tmpString);
         } else {
           this.atStatus = ATStatus.OK;
         }
@@ -217,45 +199,13 @@ export class ChatComponent implements OnInit {
         this.serialWriteMessage('AT');
         this.changeDetection.detectChanges();
       },
-      1500);
-  }
-
-  checkRSSI() {
-    this.serialWriteMessage('AT+RSSI?');
-    this.changeDetection.detectChanges();
+      1000);
   }
 
   checkAT() {
     this.serialWriteMessage('AT');
     this.changeDetection.detectChanges();
   }
-
-  checkVrr() {
-    this.serialWriteMessage('AT+VER?');
-    this.changeDetection.detectChanges();
-  }
-
-
-  checkRST() {
-    this.serialWriteMessage('AT+RST');
-    this.changeDetection.detectChanges();
-  }
-
-  sendTest() {
-    const msg = new MSG();
-    msg.msg = 'Hello, World';
-    msg.sequence = '44';
-    msg.destAddress = '11';
-    msg.sourceAddress = '10';
-    msg.hopCount = '3';
-    msg.type = '1';
-    msg.flag = '0';
-    msg.hopAddress = '22';
-    //this.serialWriteMessage(msg.toBinaryString());
-    console.log(msg.toBase64String());
-    this.changeDetection.detectChanges();
-  }
-
 
   parseData(str: string) {
     return str.replace('AT,', '').replace(',OK', '');
@@ -277,5 +227,9 @@ export class ChatComponent implements OnInit {
         this.nodes = this.nodes.filter(e => e !== addr);
       }
     }
+  }
+
+  sendPackage(pkg: Package) {
+    this.serialWriteMessage(pkg.toBase64String());
   }
 }

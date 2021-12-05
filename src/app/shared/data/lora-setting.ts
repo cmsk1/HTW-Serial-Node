@@ -4,6 +4,7 @@ export class LoraSetting {
   baudRate: number;
   addressIsSet: boolean;
   configIsSet: boolean;
+  broadcastIsSet: boolean;
 
   constructor(address: string, configString: string, baudRate: number) {
     this.address = address;
@@ -11,5 +12,6 @@ export class LoraSetting {
     this.baudRate = baudRate;
     this.addressIsSet = false;
     this.configIsSet = false;
+    this.broadcastIsSet = false;
   }
 }

@@ -1,7 +1,8 @@
 export class RoutingTableItem {
-  dest: string;
-  hop: string;
-  pre: string;
+  destination: number;
+  nextHop: number;
+  precursors: number;
   metric: number;
-  seq: number;
+  seqNum: number;
+  isValid: boolean;
 }
