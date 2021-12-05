@@ -11,11 +11,11 @@
   </div>
   <div class="col-4">
     <div class="label">Eigene Adresse</div>
-    <div><input class="form-control form-control-sm" type="text" placeholder="z.B. FFFF" [(ngModel)]="loraSetting.address"></div>
+    <div><input class="form-control form-control-sm" type="number" min="0" max="255" [(ngModel)]="loraSetting.address"></div>
   </div>
   <div class="col-12">
     <div class="label">Konfiguration</div>
-    <div><input class="form-control form-control-sm" type="text" placeholder="z.B. FFFF" value="{{loraSetting.configString}} | Baud:{{loraSetting.baudRate}}" readonly></div>
+    <div><input class="form-control form-control-sm" type="text" value="{{loraSetting.configString}} | Baud:{{loraSetting.baudRate}}" readonly></div>
   </div>
 </div>
 <hr>
@@ -56,8 +56,16 @@
     <div *ngIf="atStatus === 'SENDED'" class="fw-bold text-warning">SENDED</div>
     <div *ngIf="atStatus === 'SYSTEM_ERROR'" class="fw-bold text-danger">System-Fehler</div>
   </div>
+  <div class="col-3">
+    <div class="label">Netzwerk Status</div>
+    <div *ngIf="networkStatus === 'OK'" class="fw-bold text-success">OK</div>
+    <div *ngIf="networkStatus === 'SEARCH_NETWORK'" class="fw-bold text-warning">Suche Netzwerk</div>
+    <div *ngIf="networkStatus === 'SEARCH_ROUTE'" class="fw-bold text-warning">Suche Route</div>
+    <div *ngIf="networkStatus === 'WAIT_FOR_ACK'" class="fw-bold text-warning">Warte auf Bestätigung</div>
+    <div *ngIf="networkStatus === 'ROUTE_ERR'" class="fw-bold text-danger">Ungültige Route</div>
+  </div>
   <div class="col-12 mt-1">
-    <button *ngIf="connected !== 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="connectToPort()" [disabled]="!loraSetting || loraSetting.configString === '' || loraSetting.address.length <=0 || !selectedPort">Verbinden</button>
+    <button *ngIf="connected !== 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="connectToPort()" [disabled]="!loraSetting || loraSetting.configString === '' || loraSetting.address <= 0 || !selectedPort">Verbinden</button>
     <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-danger" (click)="closePort()">Trennen</button>
     <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkAT()">AT Prüfen</button>
   </div>
@@ -71,7 +79,8 @@
       <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
         <div class="d-block w-100" *ngFor="let item of chat">
           <div>
-            <div class="bubble py-1 px-3 text-wrap" [ngClass]="{'bubble': (!item.isSend && item.from !== 'SYSTEM' && item.from !== 'INFO'),'bubble-err': (!item.isSend && item.from === 'SYSTEM'),'bubble-info': (!item.isSend && item.from === 'INFO'), 'bubble-self text-end': item.isSend}">{{item.text}}</div>
+            <div class="bubble py-1 px-3 text-wrap"
+                 [ngClass]="{'bubble': (!item.isSend && item.from !== 'SYSTEM' && item.from !== 'INFO'),'bubble-err': (!item.isSend && item.from === 'SYSTEM'),'bubble-info': (!item.isSend && item.from === 'INFO'), 'bubble-self text-end': item.isSend}">{{item.text}}</div>
             <small class="mb-2 text-secondary small d-block" [ngClass]="{ 'text-end': item.isSend}" style="margin-top: -4px"><span *ngIf="item.from && item.from !== ''">{{item.from}} </span>am {{item.date | date:'dd.MM.yy HH:mm:ss'}}
             </small>
           </div>
@@ -80,15 +89,13 @@
       <div class="row">
         <div class="col-3">
           <div class="label">Empfänger</div>
-          <select class="form-select form-select-sm" [(ngModel)]="selectedNode">
-            <option *ngFor="let node of nodes" [value]="nodes">{{node}}</option>
-          </select>
+          <input class="form-control form-control-sm" type="number" min="0" max="255" [(ngModel)]="destinationAddress">
         </div>
         <div class="col-9">
           <div class="label">Nachricht senden</div>
           <div class="input-group input-group-sm mb-3">
             <input class="form-control form-control-sm" type="text" placeholder="Text eingeben" [(ngModel)]="inputString" [disabled]="atStatus !== 'OK'">
-            <button class="btn btn-sm btn-success" [ngClass]="{'disabled': atStatus !== 'OK'}" (click)="sendMessageToNode()">Senden</button>
+            <button class="btn btn-sm btn-success" [ngClass]="{'disabled': (atStatus !== 'OK')}" (click)="sendMessageToNode()">Senden</button>
           </div>
         </div>
       </div>

@@ -8,8 +8,14 @@ import {ATStatus} from '../../enums/atstatus';
 import {RawData} from '../../../shared/data/raw-data';
 import * as lodash from 'lodash';
 import {Package} from '../../../shared/data/header/package';
-import {RoutingTableItem} from '../../../shared/data/routing-table-item';
-import {ReverseRoutingTableItem} from '../../../shared/data/reverse-routing-table-item';
+import {NetworkStatus} from '../../enums/network-status';
+import {PackageService} from '../../../shared/services/package.service';
+import {MSG} from '../../../shared/data/header/msg';
+import {ACK} from '../../../shared/data/header/ack';
+import {RERR} from '../../../shared/data/header/rerr';
+import {RREQ} from '../../../shared/data/header/rreq';
+import {RREP} from '../../../shared/data/header/rrep';
+import {RoutingService} from '../../../shared/services/routing.service';
 
 @Component({
   selector: 'app-chat',
@@ -22,7 +28,6 @@ export class ChatComponent implements OnInit {
   chat: ChatItem[];
   lodash = lodash;
   rawData: RawData[];
-  selectedNode: string;
   inputString: string;
   inputStringRaw: string;
   selectedPortId: string;
@@ -33,23 +38,16 @@ export class ChatComponent implements OnInit {
   serialPort: SerialPort;
   parser: SerialPort.parsers.Delimiter;
   atStatus: ATStatus;
+  networkStatus: NetworkStatus;
+  destinationAddress = 255;
 
-  nodes: string[];
-
-  routingTable: RoutingTableItem[];
-  reverseRoutingTable: ReverseRoutingTableItem[];
-
-  constructor(private electron: ElectronService, private changeDetection: ChangeDetectorRef) {
-    this.loraSetting = new LoraSetting('', 'CFG=433000000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
-    this.nodes = [];
-    this.addNote('FFFF');
-    this.selectedNode = this.nodes[0];
+  constructor(private electron: ElectronService, private changeDetection: ChangeDetectorRef, private routingService: RoutingService) {
+    this.loraSetting = new LoraSetting(0, 'CFG=433000000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
     this.connected = 'NOT_CONNECTED';
     this.chat = [];
     this.rawData = [];
-    this.routingTable = [];
-    this.reverseRoutingTable = [];
     this.inputStringRaw = '';
+    this.networkStatus = NetworkStatus.SEARCH_NETWORK;
   }
 
   ngOnInit(): void {
@@ -88,6 +86,7 @@ export class ChatComponent implements OnInit {
     this.inputStringRaw = '';
     this.loraSetting.addressIsSet = false;
     this.loraSetting.configIsSet = false;
+    this.loraSetting.broadcastIsSet = false;
   }
 
   getAllPorts() {
@@ -113,7 +112,7 @@ export class ChatComponent implements OnInit {
     if (this.inputString && this.inputString.trim().length > 0) {
       const tmpString = 'AT+SEND=' + this.inputString.trim().length;
       this.atStatus = ATStatus.SENDING;
-      this.chat.push(new ChatItem(this.inputString, this.loraSetting.address, true));
+      this.chat.push(new ChatItem(this.inputString, this.loraSetting.address.toString(), true));
       this.serialWriteMessage(tmpString);
     }
   }
@@ -135,7 +134,7 @@ export class ChatComponent implements OnInit {
         this.atStatus = ATStatus.OK;
       } else if (data.toUpperCase().includes('LR,')) {
         // Handle incoming packages
-        this.handleIncommingMessage(data);
+        this.handleIncomingMessage(data);
       } else if (data.toUpperCase().includes('CPU_BUSY') || data.toUpperCase().includes('RF_BUSY')) {
         // Handle System-Error
         this.atStatus = ATStatus.SYSTEM_ERROR;
@@ -144,7 +143,7 @@ export class ChatComponent implements OnInit {
         }, 2000);
       } else if (data.toUpperCase().includes('AT,OK')) {
 
-        // Check initial settings on AT,OK
+        // Check on AT,OK
         if (!this.loraSetting.addressIsSet) {
           this.serialWriteMessage('AT+ADDR=' + this.loraSetting.address);
           this.loraSetting.addressIsSet = true;
@@ -155,7 +154,6 @@ export class ChatComponent implements OnInit {
           this.serialWriteMessage('AT+DEST=FFFF');
           this.loraSetting.broadcastIsSet = true;
         } else if (this.atStatus === ATStatus.SENDING) {
-          // Wenn länge gesetzt und OK zurück kommt -> Nachricht senden
           const tmpString = this.inputString.trim();
           this.serialWriteMessage(tmpString);
         } else {
@@ -181,17 +179,71 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  handleIncommingMessage(data: string) {
+  handleIncomingMessage(data: string) {
     const dataArray = data.split(',');
-    if (dataArray && dataArray.length > 3) {
-      // TODO Handle Protocol Data correctly
-
-      const [, sender, length, ...message] = data.split(',');
-      const messageString = message.join(',');
-
-      const chatData = new ChatItem(messageString, dataArray[1], false);
-      this.chat.push(chatData);
+    if (dataArray && dataArray.length >= 3) {
+      const messageString = dataArray[2].trim();
+      const pkg = PackageService.getPackageFrom64(messageString);
+      if (pkg != null && this.isRelevant(pkg.hopAddress)) {
+        if (pkg instanceof MSG) {
+          if (this.isLocalAddress(pkg.destAddress)) {
+            const chatData = new ChatItem(pkg.msg, pkg.prevHopAddress.toString(), false);
+            this.chat.push(chatData);
+          } else {
+            this.sendMSGToDest(pkg);
+          }
+          this.sendACK(pkg);
+        }
+        if (pkg instanceof ACK) {
+          this.handleACKisReceived(pkg);
+        }
+        if (pkg instanceof RERR) {
+          this.handleRERRisReceived(pkg);
+        }
+        if (pkg instanceof RREQ) {
+          this.handleRREQisReceived(pkg);
+        }
+        if (pkg instanceof RREP) {
+          this.handleRREPisReceived(pkg);
+        }
+      }
     }
+  }
+
+  handleACKisReceived(pkg: ACK) {
+    console.log(pkg);
+  }
+
+  handleRREPisReceived(pkg: ACK) {
+    console.log(pkg);
+  }
+
+  handleRREQisReceived(pkg: ACK) {
+    console.log(pkg);
+  }
+
+  handleRERRisReceived(pkg: ACK) {
+    console.log(pkg);
+  }
+
+  sendACK(pkg: MSG) {
+
+  }
+
+  sendMSGToDest(pkg: MSG) {
+
+  }
+
+  sendRouteRequest(pkg: Package) {
+
+  }
+
+  sendRouteReplay(pkg: Package) {
+
+  }
+
+  sendRouteError(pkg: Package) {
+
   }
 
   initAT() {
@@ -211,25 +263,15 @@ export class ChatComponent implements OnInit {
     return str.replace('AT,', '').replace(',OK', '');
   }
 
-  addNote(addr: string) {
-    if (addr && addr.trim().length > 0) {
-      addr = addr.trim();
-      if (!this.nodes.includes(addr)) {
-        this.nodes.push(addr);
-      }
-    }
-  }
-
-  removeNote(addr: string) {
-    if (addr && addr.trim().length > 0) {
-      addr = addr.trim();
-      if (this.nodes.includes(addr)) {
-        this.nodes = this.nodes.filter(e => e !== addr);
-      }
-    }
-  }
-
   sendPackage(pkg: Package) {
     this.serialWriteMessage(pkg.toBase64String());
+  }
+
+  isRelevant(dest: number) {
+    return dest === this.loraSetting.address || dest === 255;
+  }
+
+  isLocalAddress(dest: number) {
+    return dest === this.loraSetting.address;
   }
 }
