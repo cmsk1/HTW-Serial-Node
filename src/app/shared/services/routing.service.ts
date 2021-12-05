@@ -31,11 +31,11 @@ export class RoutingService {
 
   }
 
-  getRoute() {
-
+  getRoute(dest: number): RoutingTableItem {
+    return null;
   }
 
-  getReverseRoute() {
+  getReverseRoute(dest: number) {
 
   }
 }

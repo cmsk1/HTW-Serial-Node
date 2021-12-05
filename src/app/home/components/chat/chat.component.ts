@@ -40,6 +40,8 @@ export class ChatComponent implements OnInit {
   atStatus: ATStatus;
   networkStatus: NetworkStatus;
   destinationAddress = 255;
+  packageToSend: Package;
+  messageToSend: string;
 
   constructor(private electron: ElectronService, private changeDetection: ChangeDetectorRef, private routingService: RoutingService) {
     this.loraSetting = new LoraSetting(0, 'CFG=433000000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
@@ -47,6 +49,7 @@ export class ChatComponent implements OnInit {
     this.chat = [];
     this.rawData = [];
     this.inputStringRaw = '';
+    this.messageToSend = '';
     this.networkStatus = NetworkStatus.SEARCH_NETWORK;
   }
 
@@ -84,6 +87,7 @@ export class ChatComponent implements OnInit {
     this.chat = [];
     this.rawData = [];
     this.inputStringRaw = '';
+    this.messageToSend = '';
     this.loraSetting.addressIsSet = false;
     this.loraSetting.configIsSet = false;
     this.loraSetting.broadcastIsSet = false;
@@ -109,10 +113,9 @@ export class ChatComponent implements OnInit {
   }
 
   sendMessageToNode() {
-    if (this.inputString && this.inputString.trim().length > 0) {
-      const tmpString = 'AT+SEND=' + this.inputString.trim().length;
+    if (this.messageToSend && this.messageToSend.trim().length > 0) {
+      const tmpString = 'AT+SEND=' + this.messageToSend.trim().length;
       this.atStatus = ATStatus.SENDING;
-      this.chat.push(new ChatItem(this.inputString, this.loraSetting.address.toString(), true));
       this.serialWriteMessage(tmpString);
     }
   }
@@ -124,11 +127,17 @@ export class ChatComponent implements OnInit {
     }
   }
 
+  sendMessage() {
+    this.messageToSend = this.inputString.trim();
+    this.inputString = '';
+    this.sendMessageToNode();
+    this.chat.push(new ChatItem(this.messageToSend, this.loraSetting.address.toString(), true));
+  }
+
   handleReceivedData(data: string) {
     if (data && data.length > 0) {
       if (data.toUpperCase().includes('AT,SENDING')) {
         this.atStatus = ATStatus.SENDED;
-        this.inputString = '';
       } else if (data.toUpperCase().includes('AT,SENDED')) {
         // Set Ok on msg sent
         this.atStatus = ATStatus.OK;
@@ -154,7 +163,7 @@ export class ChatComponent implements OnInit {
           this.serialWriteMessage('AT+DEST=FFFF');
           this.loraSetting.broadcastIsSet = true;
         } else if (this.atStatus === ATStatus.SENDING) {
-          const tmpString = this.inputString.trim();
+          const tmpString = this.messageToSend.trim();
           this.serialWriteMessage(tmpString);
         } else {
           this.atStatus = ATStatus.OK;
@@ -186,13 +195,13 @@ export class ChatComponent implements OnInit {
       const pkg = PackageService.getPackageFrom64(messageString);
       if (pkg != null && this.isRelevant(pkg.hopAddress)) {
         if (pkg instanceof MSG) {
-          if (this.isLocalAddress(pkg.destAddress)) {
+          if (this.isLocalAddress(5)) {
             const chatData = new ChatItem(pkg.msg, pkg.prevHopAddress.toString(), false);
             this.chat.push(chatData);
           } else {
             this.sendMSGToDest(pkg);
           }
-          this.sendACK(pkg);
+          this.sendACK(pkg.prevHopAddress);
         }
         if (pkg instanceof ACK) {
           this.handleACKisReceived(pkg);
@@ -226,12 +235,31 @@ export class ChatComponent implements OnInit {
     console.log(pkg);
   }
 
-  sendACK(pkg: MSG) {
-
+  sendACK(prevHopAddress: number) {
+    const ack = new ACK();
+    ack.hopAddress = prevHopAddress;
+    ack.prevHopAddress = this.loraSetting.address;
+    this.messageToSend = ack.toBase64String();
+    this.sendMessageToNode();
   }
 
   sendMSGToDest(pkg: MSG) {
+    const route = this.routingService.getRoute(pkg.destAddress);
+    const msg = new MSG();
+    msg.hopCount = msg.hopCount + 1;
 
+    msg.prevHopAddress = this.loraSetting.address;
+    msg.destAddress = pkg.destAddress;
+    msg.sequence = 0; // TODO: Sequenznummer ?????
+
+    if (route) {
+      msg.hopAddress = route.nextHop;
+      this.messageToSend = msg.toBase64String();
+      this.sendMessageToNode();
+    } else {
+      this.packageToSend = msg;
+      // sendRouteRequest()
+    }
   }
 
   sendRouteRequest(pkg: Package) {
