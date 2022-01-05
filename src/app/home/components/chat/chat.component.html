@@ -131,7 +131,7 @@
       </table>
       <hr>
       <h5>Rev. routing Table:</h5>
-      <table class="table table-sm">
+      <table class="table table-sm mt-3">
         <thead>
         <tr>
           <th>Dest.</th>
@@ -154,11 +154,12 @@
       <h5>Waiting vor ACK for message:</h5>
       <p *ngIf="packageToSend">To: {{packageToSend.destAddress}} ({{packageToSend.msg}})</p>
       <h5>Waiting for Route:</h5>
-      <table class="table table-sm">
+      <table class="table table-sm mt-3">
         <thead>
         <tr>
           <th>Req. ID.</th>
           <th>Dest.</th>
+          <th>Ori. Sequence</th>
           <th>Message</th>
         </tr>
         </thead>
@@ -166,6 +167,7 @@
         <tr *ngFor="let item of waitForRoute">
           <th>{{item.routeRequest.requestId}}</th>
           <td>{{item.routeRequest.destAddress}}</td>
+          <td>{{item.routeRequest.originSequence}}</td>
           <td>{{item.msg.msg}}</td>
         </tr>
         </tbody>

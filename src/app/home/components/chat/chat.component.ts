@@ -59,6 +59,7 @@ export class ChatComponent implements OnInit {
     this.chat = [];
     this.rawData = [];
     this.waitForRoute = [];
+    this.sentMSGGs = [];
     this.inputStringRaw = '';
     this.messageToSend = '';
   }
@@ -129,6 +130,7 @@ export class ChatComponent implements OnInit {
       const tmpString = 'AT+SEND=' + this.messageToSend.trim().length;
       this.atStatus = ATStatus.SENDING;
       this.serialWriteMessage(tmpString);
+      console.log(PackageService.getPackageFrom64(this.messageToSend.trim()));
     }
   }
 
@@ -213,6 +215,7 @@ export class ChatComponent implements OnInit {
     if (dataArray && dataArray.length >= 2) {
       const messageString = dataArray[2].trim();
       const pkg = PackageService.getPackageFrom64(messageString);
+      console.log(pkg);
       if (pkg != null && this.isRelevant(pkg.hopAddress)) {
         if (pkg instanceof MSG) {
           if (this.isLocalAddress(pkg.destAddress)) {
@@ -235,6 +238,7 @@ export class ChatComponent implements OnInit {
         if (pkg instanceof RREP) {
           this.handleRREPisReceived(pkg);
         }
+        this.changeDetection.detectChanges();
       }
     }
   }
@@ -258,8 +262,10 @@ export class ChatComponent implements OnInit {
   handleRREPisReceived(pkg: RREP) {
     if (this.isLocalAddress(pkg.destAddress)) {
       for (const item of this.waitForRoute) {
-        if (item.routeRequest.requestId === pkg.requestId && pkg.originAddress === this.loraSetting.address) {
+        if (item.routeRequest.requestId === pkg.requestId) {
           RoutingService.addRoutingTableItem(item.routeRequest.destAddress, pkg.hopCount, pkg.destSequence, pkg.prevHopAddress, []);
+          this.waitForRoute = this.waitForRoute.filter(r => r.routeRequest.requestId !== pkg.requestId);
+          clearTimeout(this.routeTimer);
           this.sendMSGToDest(item.msg);
           return;
         }
@@ -295,7 +301,7 @@ export class ChatComponent implements OnInit {
   }
 
   sendMSGToDest(pkg: MSG) {
-    if (this.sentMSGGs.includes(pkg.toBase64String())) {
+    if (!this.sentMSGGs.includes(pkg.toBase64String())) {
       const route = RoutingService.getRoute(pkg.destAddress);
       const msg = new MSG();
       msg.hopCount = msg.hopCount + 1;
@@ -308,6 +314,7 @@ export class ChatComponent implements OnInit {
       if (route) {
         msg.hopAddress = route.nextHop;
         this.sendMessageToNode(msg.toBase64String());
+        this.packageToSend = msg;
         console.log('Info: send message to dest ' + msg.destAddress + '.');
         const self = this;
         this.ackTimer = setTimeout(function() {
@@ -322,7 +329,6 @@ export class ChatComponent implements OnInit {
           }
         }, 120000);
       } else {
-        this.packageToSend = msg;
         this.sendNewRouteRequest(msg);
         console.log('Info: no route found, request new route');
       }
@@ -455,15 +461,16 @@ export class ChatComponent implements OnInit {
   }
 
   printTestData(){
-    const rep = new RREP();
+   /* const rep = new RREP();
     rep.hopCount = 0;
     rep.destAddress = this.loraSetting.address;
-    rep.destSequence = 1;
+    rep.destSequence = 3;
     rep.requestId = 2;
     rep.originAddress = 2;
     rep.ttl = 0;
     rep.prevHopAddress = 2;
     rep.hopAddress = this.loraSetting.address;
     console.log(rep.toBase64String());
+*/
   }
 }

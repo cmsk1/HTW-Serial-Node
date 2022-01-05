@@ -23,6 +23,7 @@ export class PackageService {
       const arrAll = Array.prototype.slice.call(bufAll, 0);
       const tmpType = parseInt(arr[0].toString(2).padStart(8, '0').substring(0, 4), 2);
       const tmpFlag = parseInt(arr[0].toString(2).padStart(8, '0').substring(-4), 2);
+      console.log(base64);
       switch (tmpType) {
         case 0: {
           value = new RREQ();
