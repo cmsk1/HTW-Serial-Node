@@ -1,45 +1,29 @@
 <h5 class="mt-3">Einstellungen:</h5>
-<div class="row" *ngIf="loraSetting">
+<div *ngIf="loraSetting" class="row">
   <div class="col-8">
     <div class="label">Port</div>
     <div class="input-group input-group-sm">
-      <select class="form-select form-select-sm" [(ngModel)]="selectedPortId" (ngModelChange)="selectPort(selectedPortId)">
+      <select (ngModelChange)="selectPort(selectedPortId)" [(ngModel)]="selectedPortId" class="form-select form-select-sm">
         <option *ngFor="let port of ports" [value]="port.path">{{port.comName}}</option>
       </select>
-      <button class="btn btn-sm btn-success" (click)="getAllPorts()">Update</button>
+      <button (click)="getAllPorts()" class="btn btn-sm btn-success">Update</button>
     </div>
   </div>
   <div class="col-4">
     <div class="label">Eigene Adresse</div>
-    <div><input class="form-control form-control-sm" type="number" min="0" max="255" [(ngModel)]="loraSetting.address"></div>
+    <div><input [(ngModel)]="loraSetting.address" class="form-control form-control-sm" max="255" min="0" type="number"></div>
   </div>
   <div class="col-12">
     <div class="label">Konfiguration</div>
-    <div><input class="form-control form-control-sm" type="text" value="{{loraSetting.configString}} | Baud:{{loraSetting.baudRate}}" readonly></div>
+    <div><input class="form-control form-control-sm" readonly type="text" value="{{loraSetting.configString}} | Baud:{{loraSetting.baudRate}}"></div>
   </div>
 </div>
 <hr>
-<h5>Aktuelle Auswahl:</h5>
-<div class="row" *ngIf="selectedPort">
+<h5>Status</h5>
+<div *ngIf="selectedPort" class="row">
   <div class="col-3">
     <div class="label">COM Name</div>
     <div>{{selectedPort.comName}}</div>
-  </div>
-  <div class="col-3">
-    <div class="label">COM Hersteller</div>
-    <div>{{selectedPort.manufacturer}}</div>
-  </div>
-  <div class="col-3">
-    <div class="label">PNP ID</div>
-    <div>{{selectedPort.pnpId}}</div>
-  </div>
-  <div class="col-3">
-    <div class="label">Adresse</div>
-    <div>{{loraSetting.address}}</div>
-  </div>
-  <div class="col-3">
-    <div class="label">Baud Rate</div>
-    <div>{{loraSetting.baudRate}}</div>
   </div>
   <div class="col-3">
     <div class="label">Status</div>
@@ -56,32 +40,32 @@
     <div *ngIf="atStatus === 'SENDED'" class="fw-bold text-warning">SENDED</div>
     <div *ngIf="atStatus === 'SYSTEM_ERROR'" class="fw-bold text-danger">System-Fehler</div>
   </div>
-  <div class="col-3">
-    <div class="label">Netzwerk Status</div>
-    <div *ngIf="networkStatus === 'OK'" class="fw-bold text-success">OK</div>
-    <div *ngIf="networkStatus === 'SEARCH_NETWORK'" class="fw-bold text-warning">Suche Netzwerk</div>
-    <div *ngIf="networkStatus === 'SEARCH_ROUTE'" class="fw-bold text-warning">Suche Route</div>
-    <div *ngIf="networkStatus === 'WAIT_FOR_ACK'" class="fw-bold text-warning">Warte auf Bestätigung</div>
-    <div *ngIf="networkStatus === 'ROUTE_ERR'" class="fw-bold text-danger">Ungültige Route</div>
-  </div>
   <div class="col-12 mt-1">
-    <button *ngIf="connected !== 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="connectToPort()" [disabled]="!loraSetting || loraSetting.configString === '' || loraSetting.address <= 0 || !selectedPort">Verbinden</button>
-    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-danger" (click)="closePort()">Trennen</button>
-    <button *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary" (click)="checkAT()">AT Prüfen</button>
+    <button (click)="connectToPort()" *ngIf="connected !== 'CONNECTED'" [disabled]="!loraSetting || loraSetting.configString === '' || loraSetting.address <= 0 || !selectedPort" class="btn btn-sm me-2 btn-primary">Verbinden</button>
+    <button (click)="closePort()" *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-danger">Trennen</button>
+    <button (click)="checkAT()" *ngIf="connected === 'CONNECTED'" class="btn btn-sm me-2 btn-primary">AT Prüfen</button>
   </div>
 </div>
 <hr>
-
-<div class="mb-3">
-  <div class="row">
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a (click)="tab = 'CHAT'" [ngClass]="{'active': tab === 'CHAT'}" class="nav-link">Chat</a>
+  </li>
+  <li class="nav-item">
+    <a (click)="tab = 'DEBUG'" [ngClass]="{'active': tab === 'DEBUG'}" class="nav-link">Debug</a>
+  </li>
+</ul>
+<ng-container *ngIf="tab === 'CHAT'">
+  <div class="row my-3">
     <div class="col">
       <h5>Chat:</h5>
       <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
-        <div class="d-block w-100" *ngFor="let item of chat">
+        <div *ngFor="let item of chat" class="d-block w-100">
           <div>
-            <div class="bubble py-1 px-3 text-wrap"
-                 [ngClass]="{'bubble': (!item.isSend && item.from !== 'SYSTEM' && item.from !== 'INFO'),'bubble-err': (!item.isSend && item.from === 'SYSTEM'),'bubble-info': (!item.isSend && item.from === 'INFO'), 'bubble-self text-end': item.isSend}">{{item.text}}</div>
-            <small class="mb-2 text-secondary small d-block" [ngClass]="{ 'text-end': item.isSend}" style="margin-top: -4px"><span *ngIf="item.from && item.from !== ''">{{item.from}} </span>am {{item.date | date:'dd.MM.yy HH:mm:ss'}}
+            <div
+              [ngClass]="{'bubble': (!item.isSend && item.from !== 'SYSTEM' && item.from !== 'INFO'),'bubble-err': (!item.isSend && item.from === 'SYSTEM'),'bubble-info': (!item.isSend && item.from === 'INFO'), 'bubble-self text-end': item.isSend}"
+              class="bubble py-1 px-3 text-wrap">{{item.text}}</div>
+            <small [ngClass]="{ 'text-end': item.isSend}" class="mb-2 text-secondary small d-block" style="margin-top: -4px"><span *ngIf="item.from && item.from !== ''">{{item.from}} </span>am {{item.date | date:'dd.MM.yy HH:mm:ss'}}
             </small>
           </div>
         </div>
@@ -89,32 +73,103 @@
       <div class="row">
         <div class="col-3">
           <div class="label">Empfänger</div>
-          <input class="form-control form-control-sm" type="number" min="0" max="255" [(ngModel)]="destinationAddress">
+          <input [(ngModel)]="destinationAddress" class="form-control form-control-sm" max="255" min="0" type="number">
         </div>
         <div class="col-9">
           <div class="label">Nachricht senden</div>
           <div class="input-group input-group-sm mb-3">
-            <input class="form-control form-control-sm" type="text" placeholder="Text eingeben" [(ngModel)]="inputString" [disabled]="atStatus !== 'OK'">
-            <button class="btn btn-sm btn-success" [ngClass]="{'disabled': (atStatus !== 'OK')}" (click)="sendMessage()">Senden</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-4 border-start">
-      <h5>RAW Data:</h5>
-      <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
-        <pre class="d-block m-0" style="overflow-x: hidden" [ngClass]="{'green-text': rawItem.isSend}" *ngFor="let rawItem of rawData"><span>{{rawItem.date | date:'dd.MM.yy HH:mm:ss'}}</span> - {{rawItem.data}}</pre>
-      </div>
-      <div class="row">
-        <div class="col-12">
-          <div class="label">Befehl senden</div>
-          <div class="input-group input-group-sm mb-3">
-            <input class="form-control form-control-sm" type="text" placeholder="Befehl eingeben" [(ngModel)]="inputStringRaw" [disabled]="atStatus !== 'OK'">
-            <button class="btn btn-sm btn-secondary" [ngClass]="{'disabled': atStatus !== 'OK'}" (click)="sendRawMessage()">Senden</button>
+            <input [(ngModel)]="inputString" [disabled]="atStatus !== 'OK'" class="form-control form-control-sm" placeholder="Text eingeben" type="text">
+            <button (click)="sendMessage()" [ngClass]="{'disabled': (atStatus !== 'OK')}" class="btn btn-sm btn-success">Senden</button>
           </div>
         </div>
       </div>
     </div>
   </div>
-
-</div>
+</ng-container>
+<ng-container *ngIf="tab === 'DEBUG'">
+  <div class="row my-3">
+    <div class="col-6 border-end">
+      <h5>Konsole:</h5>
+      <div class="overflow-auto border rounded w-100 mb-3 p-3" style="height: 500px">
+        <pre *ngFor="let rawItem of rawData" [ngClass]="{'green-text': rawItem.isSend}" class="d-block m-0" style="overflow-x: hidden"><span>{{rawItem.date | date:'dd.MM.yy HH:mm:ss'}}</span> - {{rawItem.data}}</pre>
+      </div>
+      <div class="row">
+        <div class="col-12">
+          <div class="label">Befehl senden</div>
+          <div class="input-group input-group-sm mb-3">
+            <input [(ngModel)]="inputStringRaw" [disabled]="atStatus !== 'OK'" class="form-control form-control-sm" placeholder="Befehl eingeben" type="text">
+            <button (click)="sendRawMessage()" [ngClass]="{'disabled': atStatus !== 'OK'}" class="btn btn-sm btn-secondary">Senden</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 border-end">
+      <h5>Routing Table:</h5>
+      <table class="table table-sm">
+        <thead>
+        <tr>
+          <th>Dest.</th>
+          <th>Next Hop</th>
+          <th>Precursors</th>
+          <th>Sequence Nr.</th>
+          <th>Metric</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let item of routingService.routingTable">
+          <th>{{item.destination}}</th>
+          <td>{{item.nextHop}}</td>
+          <td>
+            <ul>
+              <li *ngFor="let pre of item.precursors"> {{pre}}</li>
+            </ul>
+          </td>
+          <td>{{item.seqNum}}</td>
+          <td>{{item.metric}}</td>
+        </tr>
+        </tbody>
+      </table>
+      <hr>
+      <h5>Rev. routing Table:</h5>
+      <table class="table table-sm">
+        <thead>
+        <tr>
+          <th>Dest.</th>
+          <th>Prev Hop</th>
+          <th>Source</th>
+          <th>Request ID</th>
+          <th>Metric</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let item of routingService.reverseRoutingTable">
+          <th>{{item.destination}}</th>
+          <td>{{item.previousHop}}</td>
+          <td>{{item.source}}</td>
+          <td>{{item.requestId}}</td>
+          <td>{{item.metric}}</td>
+        </tr>
+        </tbody>
+      </table>
+      <h5>Waiting vor ACK for message:</h5>
+      <p *ngIf="packageToSend">To: {{packageToSend.destAddress}} ({{packageToSend.msg}})</p>
+      <h5>Waiting for Route:</h5>
+      <table class="table table-sm">
+        <thead>
+        <tr>
+          <th>Req. ID.</th>
+          <th>Dest.</th>
+          <th>Message</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let item of waitForRoute">
+          <th>{{item.routeRequest.requestId}}</th>
+          <td>{{item.routeRequest.destAddress}}</td>
+          <td>{{item.msg.msg}}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</ng-container>

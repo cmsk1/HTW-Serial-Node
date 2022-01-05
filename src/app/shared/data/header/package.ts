@@ -4,7 +4,7 @@ export abstract class Package {
   hopAddress: number;
   prevHopAddress: number;
 
-  constructor() {
+  protected constructor() {
     this.type = 0;
     this.flag = 0;
     this.hopAddress = 0;
