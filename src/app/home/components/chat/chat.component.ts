@@ -212,8 +212,8 @@ export class ChatComponent implements OnInit {
   handleIncomingMessage(data: string) {
     console.log('incoming data:' + data);
     const dataArray = data.split(',');
-    if (dataArray && dataArray.length >= 2) {
-      const messageString = dataArray[2].trim();
+    if (dataArray && dataArray.length >= 3) {
+      const messageString = dataArray[3].trim();
       const pkg = PackageService.getPackageFrom64(messageString);
       console.log(pkg);
       if (pkg != null && this.isRelevant(pkg.hopAddress)) {
