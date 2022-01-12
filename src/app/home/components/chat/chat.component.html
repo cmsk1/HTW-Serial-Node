@@ -11,7 +11,7 @@
   </div>
   <div class="col-4">
     <div class="label">Eigene Adresse</div>
-    <div><input [(ngModel)]="loraSetting.address" class="form-control form-control-sm" max="255" min="0" type="number"></div>
+    <div><input [(ngModel)]="loraSetting.address" [disabled]="loraSetting.addressIsSet" class="form-control form-control-sm" max="255" min="0" type="number"></div>
   </div>
   <div class="col-12">
     <div class="label">Konfiguration</div>
@@ -79,7 +79,7 @@
           <div class="label">Nachricht senden</div>
           <div class="input-group input-group-sm mb-3">
             <input [(ngModel)]="inputString" [disabled]="atStatus !== 'OK'" class="form-control form-control-sm" placeholder="Text eingeben" type="text">
-            <button (click)="sendMessage()" [ngClass]="{'disabled': (atStatus !== 'OK')}" class="btn btn-sm btn-success">Senden</button>
+            <button (click)="sendMessage()" [ngClass]="{'disabled': (atStatus !== 'OK' || loraSetting.address === destinationAddress)}" class="btn btn-sm btn-success">Senden</button>
           </div>
         </div>
       </div>
@@ -113,6 +113,7 @@
           <th>Precursors</th>
           <th>Sequence Nr.</th>
           <th>Metric</th>
+          <th>Is valid</th>
         </tr>
         </thead>
         <tbody>
@@ -126,11 +127,12 @@
           </td>
           <td>{{item.seqNum}}</td>
           <td>{{item.metric}}</td>
+          <td>{{item.isValid}}</td>
         </tr>
         </tbody>
       </table>
       <hr>
-      <h5>Rev. routing Table:</h5>
+      <h5 class="mt-3">Rev. routing Table:</h5>
       <table class="table table-sm mt-3">
         <thead>
         <tr>
@@ -152,8 +154,9 @@
         </tbody>
       </table>
       <h5>Waiting vor ACK for message:</h5>
-      <p *ngIf="packageToSend">To: {{packageToSend.destAddress}} ({{packageToSend.msg}})</p>
-      <h5>Waiting for Route:</h5>
+      <p *ngIf="packageToSend">To: {{packageToSend.destAddress}} (MSG: {{packageToSend.msg}})</p>
+      <p *ngIf="!packageToSend" class="text-secondary">No pending ACK</p>
+      <h5 class="mt-3">Waiting for Route:</h5>
       <table class="table table-sm mt-3">
         <thead>
         <tr>

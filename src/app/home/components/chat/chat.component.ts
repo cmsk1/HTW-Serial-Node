@@ -144,7 +144,7 @@ export class ChatComponent implements OnInit {
   sendMessage() {
     const tmpMSG = new MSG();
     tmpMSG.destAddress = this.destinationAddress;
-    tmpMSG.hopCount = -1;
+    tmpMSG.hopCount = 0;
     tmpMSG.sequence = SequenceNumberService.getNewSequenceNr();
     tmpMSG.msg = this.inputString.trim();
     this.inputString = '';
@@ -411,7 +411,7 @@ export class ChatComponent implements OnInit {
     for (const numbersToSendElement of numbersToSend) {
       const tmp = new RERR();
       tmp.prevHopAddress = this.loraSetting.address;
-      tmp.hopAddress = this.loraSetting.address;
+      tmp.hopAddress = numbersToSendElement;
       if (routes && routes.length > 0) {
         for (const route of routes) {
           const tmpPath = new RerrPath();
@@ -421,7 +421,9 @@ export class ChatComponent implements OnInit {
           tmp.paths.push(tmpPath);
         }
         tmp.pathCount = tmp.paths.length;
-        errs.push(tmp);
+        if (tmp.hopAddress !== this.loraSetting.address) {
+          errs.push(tmp);
+        }
       }
     }
 
@@ -430,7 +432,7 @@ export class ChatComponent implements OnInit {
           this.sendMessageToNode(errs[i].toBase64String());
           console.log('Info: send error notification to ' + errs[i].hopAddress + '.');
         },
-        (i + 1) * 1100); // sende alle 1.1 sekunden
+        (i + 1) * 1500); // sende alle 1.5 sekunden
     }
 
   }
