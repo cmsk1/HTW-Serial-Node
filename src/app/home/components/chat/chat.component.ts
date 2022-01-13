@@ -53,7 +53,7 @@ export class ChatComponent implements OnInit {
   routeTimer: any;
 
   constructor(private electron: ElectronService, private changeDetection: ChangeDetectorRef) {
-    this.loraSetting = new LoraSetting(0, 'CFG=433000000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
+    this.loraSetting = new LoraSetting(93, 'CFG=434920000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
     this.connected = 'NOT_CONNECTED';
     this.tab = 'CHAT';
     this.chat = [];
@@ -182,6 +182,7 @@ export class ChatComponent implements OnInit {
           this.serialWriteMessage('AT+DEST=FFFF');
           this.loraSetting.broadcastIsSet = true;
           RoutingService.addRoutingTableItem(this.loraSetting.address, 0, 0, this.loraSetting.address, []);
+          this.sendMessageToNode('' + this.loraSetting.address);
         } else if (this.atStatus === ATStatus.SENDING) {
           const tmpString = this.messageToSend.trim();
           this.serialWriteMessage(tmpString);
@@ -271,6 +272,7 @@ export class ChatComponent implements OnInit {
         }
       }
     } else {
+      // TODO: check if ho or node is for me
       this.redirectRouteReplay(pkg);
     }
   }
@@ -327,7 +329,7 @@ export class ChatComponent implements OnInit {
             self.ackAttempts = self.ackAttempts + 1;
             self.sendMSGToDest(self.packageToSend);
           }
-        }, 120000);
+        }, 50000);
       } else {
         this.sendNewRouteRequest(msg);
         console.log('Info: no route found, request new route');
@@ -355,6 +357,7 @@ export class ChatComponent implements OnInit {
     this.sendMessageToNode(req.toBase64String());
     const self = this;
     this.routeTimer = setTimeout(function() {
+        self.routeToFind.requestId = SequenceNumberService.getNewSequenceNr();
         self.redirectRouteRequest(self.routeToFind);
         self.routeAttempts = 0;
         self.routeToFind = null;
@@ -363,11 +366,14 @@ export class ChatComponent implements OnInit {
   }
 
   redirectRouteRequest(req: RREQ) {
-    req.prevHopAddress = this.loraSetting.address;
-    req.hopCount = req.hopCount + 1;
-    RoutingService.addReverseRoutingTableItem(req);
-    this.sendMessageToNode(req.toBase64String());
-    console.log('Info: redirect route request for destination ' + req.destAddress + '.');
+    const self = this;
+    setTimeout(function() {
+      req.prevHopAddress = self.loraSetting.address;
+      req.hopCount = req.hopCount + 1;
+      RoutingService.addReverseRoutingTableItem(req);
+      self.sendMessageToNode(req.toBase64String());
+      console.log('Info: redirect route request for destination ' + req.destAddress + '.');
+    }, 2345);
   }
 
   sendRouteReplay(req: RREQ) {
@@ -385,17 +391,21 @@ export class ChatComponent implements OnInit {
   }
 
   redirectRouteReplay(rep: RREP) {
-    const origin = RoutingService.getReverseRoute(rep.originAddress);
-    if (origin) {
-      rep.prevHopAddress = this.loraSetting.address;
-      rep.hopAddress = origin.previousHop;
-      rep.hopCount = rep.hopCount + 1;
-      RoutingService.addRoutingTableItem(origin.destination, origin.metric, rep.destSequence, rep.hopAddress, [rep.prevHopAddress]);
-      this.sendMessageToNode(rep.toBase64String());
-      console.log('Info: redirected route reply.');
-    } else {
-      console.log('Error: could not redirect route replay, because no matching reverse route was found.');
-    }
+    const self = this;
+    setTimeout(function() {
+      const origin = RoutingService.getReverseRoute(rep.originAddress);
+      if (origin) {
+        rep.prevHopAddress = self.loraSetting.address;
+        rep.hopAddress = origin.previousHop;
+        rep.hopCount = rep.hopCount + 1;
+        RoutingService.addRoutingTableItem(origin.destination, origin.metric, rep.destSequence, rep.hopAddress, [rep.prevHopAddress]);
+        self.sendMessageToNode(rep.toBase64String());
+        console.log('Info: redirected route reply.');
+      } else {
+        console.log('Error: could not redirect route replay, because no matching reverse route was found.');
+      }
+    }, 1345);
+
   }
 
   sendRouteError(invalidDestination: number) {
@@ -440,6 +450,7 @@ export class ChatComponent implements OnInit {
   initAT() {
     setTimeout(() => {
         this.checkAT();
+        this.sendRawMessage();
         this.printTestData();
       },
       1000);

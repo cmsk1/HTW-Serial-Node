@@ -119,7 +119,7 @@
         <tbody>
         <tr *ngFor="let item of routingService.routingTable">
           <th>{{item.destination}}</th>
-          <td>{{item.nextHop}}</td>
+          <td>{{item.nextHop}}&emsp;<input [(ngModel)]="item.nextHop" type="number" class="form-control form-control-sm d-inline" style="width: 45px"> </td>
           <td>
             <ul>
               <li *ngFor="let pre of item.precursors"> {{pre}}</li>
