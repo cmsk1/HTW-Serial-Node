@@ -1,3 +1,4 @@
+/* eslint-disable space-before-function-paren */
 import {ChangeDetectorRef, Component, OnInit} from '@angular/core';
 import {SerPort} from '../../../shared/data/ser-port';
 import {ElectronService} from '../../../core/services';
@@ -17,6 +18,11 @@ import {RoutingService} from '../../../shared/services/routing.service';
 import {SequenceNumberService} from '../../../shared/services/sequence-number.service';
 import {WaitForRoute} from '../../../shared/data/wait-for-route';
 import {RerrPath} from '../../../shared/data/header/rerr-path';
+import {
+  faTrashAlt,
+} from '@fortawesome/free-solid-svg-icons';
+import {RoutingTableItem} from '../../../shared/data/routing-table-item';
+import {ReverseRoutingTableItem} from '../../../shared/data/reverse-routing-table-item';
 
 @Component({
   selector: 'app-chat',
@@ -51,6 +57,7 @@ export class ChatComponent implements OnInit {
   tab: string;
   ackTimer: any;
   routeTimer: any;
+  faTrashAlt = faTrashAlt;
 
   constructor(private electron: ElectronService, private changeDetection: ChangeDetectorRef) {
     this.loraSetting = new LoraSetting(93, 'CFG=434920000,5,6,12,4,1,0,0,0,0,3000,8,8', 115200);
@@ -182,7 +189,9 @@ export class ChatComponent implements OnInit {
           this.serialWriteMessage('AT+DEST=FFFF');
           this.loraSetting.broadcastIsSet = true;
           RoutingService.addRoutingTableItem(this.loraSetting.address, 0, 0, this.loraSetting.address, []);
-          this.sendMessageToNode('' + this.loraSetting.address);
+          setTimeout(() => {
+            this.sendMessageToNode('' + this.loraSetting.address);
+          }, 1000);
         } else if (this.atStatus === ATStatus.SENDING) {
           const tmpString = this.messageToSend.trim();
           this.serialWriteMessage(tmpString);
@@ -284,9 +293,9 @@ export class ChatComponent implements OnInit {
         return;
       }
     }
-    if (this.isLocalAddress(pkg.destAddress)){
+    if (this.isLocalAddress(pkg.destAddress)) {
       this.sendRouteReplay(pkg);
-    }else {
+    } else {
       this.redirectRouteRequest(pkg);
     }
   }
@@ -319,7 +328,7 @@ export class ChatComponent implements OnInit {
         this.packageToSend = msg;
         console.log('Info: send message to dest ' + msg.destAddress + '.');
         const self = this;
-        this.ackTimer = setTimeout(function() {
+        this.ackTimer = setTimeout(function () {
           if (self.ackAttempts > 3) {
             self.sendRouteError(self.packageToSend.hopAddress);
             self.ackAttempts = 0;
@@ -356,18 +365,18 @@ export class ChatComponent implements OnInit {
     this.routeToFind = req;
     this.sendMessageToNode(req.toBase64String());
     const self = this;
-    this.routeTimer = setTimeout(function() {
-        self.routeToFind.requestId = SequenceNumberService.getNewSequenceNr();
-        self.redirectRouteRequest(self.routeToFind);
-        self.routeAttempts = 0;
-        self.routeToFind = null;
-        clearTimeout(self.routeTimer);
+    this.routeTimer = setTimeout(function () {
+      self.routeToFind.requestId = SequenceNumberService.getNewSequenceNr();
+      self.redirectRouteRequest(self.routeToFind);
+      self.routeAttempts = 0;
+      self.routeToFind = null;
+      clearTimeout(self.routeTimer);
     }, 120000);
   }
 
   redirectRouteRequest(req: RREQ) {
     const self = this;
-    setTimeout(function() {
+    setTimeout(function () {
       req.prevHopAddress = self.loraSetting.address;
       req.hopCount = req.hopCount + 1;
       RoutingService.addReverseRoutingTableItem(req);
@@ -392,7 +401,7 @@ export class ChatComponent implements OnInit {
 
   redirectRouteReplay(rep: RREP) {
     const self = this;
-    setTimeout(function() {
+    setTimeout(function () {
       const origin = RoutingService.getReverseRoute(rep.originAddress);
       if (origin) {
         rep.prevHopAddress = self.loraSetting.address;
@@ -473,17 +482,29 @@ export class ChatComponent implements OnInit {
     return dest === this.loraSetting.address;
   }
 
-  printTestData(){
-   /* const rep = new RREP();
-    rep.hopCount = 0;
-    rep.destAddress = this.loraSetting.address;
-    rep.destSequence = 3;
-    rep.requestId = 2;
-    rep.originAddress = 2;
-    rep.ttl = 0;
-    rep.prevHopAddress = 2;
-    rep.hopAddress = this.loraSetting.address;
-    console.log(rep.toBase64String());
-*/
+  removeReverseRoutingItem(item: ReverseRoutingTableItem) {
+    RoutingService.removeReverseRoutingTableItem(item.requestId, item.destination);
+  }
+
+  removeRoutingItem(item: RoutingTableItem) {
+    RoutingService.removeRoutingTableItem(item.destination);
+  }
+
+  removeWaitForRouteItem(item: WaitForRoute) {
+    this.waitForRoute = this.waitForRoute.filter(i => i.routeRequest.requestId !== item.routeRequest.requestId);
+  }
+
+  printTestData() {
+    /* const rep = new RREP();
+     rep.hopCount = 0;
+     rep.destAddress = this.loraSetting.address;
+     rep.destSequence = 3;
+     rep.requestId = 2;
+     rep.originAddress = 2;
+     rep.ttl = 0;
+     rep.prevHopAddress = 2;
+     rep.hopAddress = this.loraSetting.address;
+     console.log(rep.toBase64String());
+ */
   }
 }

@@ -114,12 +114,13 @@
           <th>Sequence Nr.</th>
           <th>Metric</th>
           <th>Is valid</th>
+          <th>Delete</th>
         </tr>
         </thead>
         <tbody>
         <tr *ngFor="let item of routingService.routingTable">
-          <th>{{item.destination}}</th>
-          <td>{{item.nextHop}}&emsp;<input [(ngModel)]="item.nextHop" type="number" class="form-control form-control-sm d-inline" style="width: 45px"> </td>
+          <th><input [(ngModel)]="item.destination" type="number" class="form-control form-control-sm d-inline" style="width: 50px"></th>
+          <td><input [(ngModel)]="item.nextHop" type="number" class="form-control form-control-sm d-inline" style="width: 50px"> </td>
           <td>
             <ul>
               <li *ngFor="let pre of item.precursors"> {{pre}}</li>
@@ -128,6 +129,7 @@
           <td>{{item.seqNum}}</td>
           <td>{{item.metric}}</td>
           <td>{{item.isValid}}</td>
+          <td><button class="btn btn-sm btn-danger" (click)="removeRoutingItem(item)"><fa-icon [icon]="faTrashAlt"></fa-icon></button></td>
         </tr>
         </tbody>
       </table>
@@ -141,6 +143,7 @@
           <th>Source</th>
           <th>Request ID</th>
           <th>Metric</th>
+          <th>Delete</th>
         </tr>
         </thead>
         <tbody>
@@ -150,6 +153,7 @@
           <td>{{item.source}}</td>
           <td>{{item.requestId}}</td>
           <td>{{item.metric}}</td>
+          <td><button class="btn btn-sm btn-danger" (click)="removeReverseRoutingItem(item)"><fa-icon [icon]="faTrashAlt"></fa-icon></button></td>
         </tr>
         </tbody>
       </table>
@@ -164,6 +168,7 @@
           <th>Dest.</th>
           <th>Ori. Sequence</th>
           <th>Message</th>
+          <th>Delete</th>
         </tr>
         </thead>
         <tbody>
@@ -172,6 +177,7 @@
           <td>{{item.routeRequest.destAddress}}</td>
           <td>{{item.routeRequest.originSequence}}</td>
           <td>{{item.msg.msg}}</td>
+          <td><button class="btn btn-sm btn-danger" (click)="removeWaitForRouteItem(item)"><fa-icon [icon]="faTrashAlt"></fa-icon></button></td>
         </tr>
         </tbody>
       </table>
