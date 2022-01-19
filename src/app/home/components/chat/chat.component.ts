@@ -137,6 +137,7 @@ export class ChatComponent implements OnInit {
       const tmpString = 'AT+SEND=' + this.messageToSend.trim().length;
       this.atStatus = ATStatus.SENDING;
       this.serialWriteMessage(tmpString);
+      console.log('Sending:');
       console.log(PackageService.getPackageFrom64(this.messageToSend.trim()));
     }
   }
@@ -227,6 +228,7 @@ export class ChatComponent implements OnInit {
       const pkg = PackageService.getPackageFrom64(messageString);
       console.log(pkg);
       if (pkg != null && this.isRelevant(pkg.hopAddress)) {
+        console.log('Data is relevant');
         if (pkg instanceof MSG) {
           if (this.isLocalAddress(pkg.destAddress)) {
             const chatData = new ChatItem(pkg.msg, pkg.prevHopAddress.toString(), false);
@@ -382,7 +384,7 @@ export class ChatComponent implements OnInit {
       RoutingService.addReverseRoutingTableItem(req);
       self.sendMessageToNode(req.toBase64String());
       console.log('Info: redirect route request for destination ' + req.destAddress + '.');
-    }, 2345);
+    }, this.randomNum());
   }
 
   sendRouteReplay(req: RREQ) {
@@ -413,7 +415,7 @@ export class ChatComponent implements OnInit {
       } else {
         console.log('Error: could not redirect route replay, because no matching reverse route was found.');
       }
-    }, 1345);
+    }, this.randomNum());
 
   }
 
@@ -509,5 +511,9 @@ export class ChatComponent implements OnInit {
      rep.hopAddress = this.loraSetting.address;
      console.log(rep.toBase64String());
  */
+  }
+
+  randomNum(): number {
+    return Math.floor(1000 + Math.random() * 4000);
   }
 }
