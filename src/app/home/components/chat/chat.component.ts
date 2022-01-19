@@ -283,7 +283,6 @@ export class ChatComponent implements OnInit {
         }
       }
     } else {
-      // TODO: check if ho or node is for me
       this.redirectRouteReplay(pkg);
     }
   }
@@ -295,6 +294,12 @@ export class ChatComponent implements OnInit {
         return;
       }
     }
+    for (const item of RoutingService.reverseRoutingTable) {
+      if (item.requestId === pkg.requestId && pkg.destAddress === item.destination) {
+        return;
+      }
+    }
+
     if (this.isLocalAddress(pkg.destAddress)) {
       this.sendRouteReplay(pkg);
     } else {
@@ -303,7 +308,13 @@ export class ChatComponent implements OnInit {
   }
 
   handleRERRisReceived(pkg: RERR) {
-    this.sendRouteError(pkg.paths[0].destAddress);
+    if (this.isLocalAddress(pkg.hopAddress)) {
+      for (const path of pkg.paths) {
+        RoutingService.invalidateRoute(path.destAddress);
+      }
+    } else {
+      this.sendRouteError(pkg.paths[0].destAddress);
+    }
   }
 
   sendACK(prevHopAddress: number) {
@@ -331,7 +342,7 @@ export class ChatComponent implements OnInit {
         console.log('Info: send message to dest ' + msg.destAddress + '.');
         const self = this;
         this.ackTimer = setTimeout(function () {
-          if (self.ackAttempts > 3) {
+          if (self.ackAttempts >= 3) {
             self.sendRouteError(self.packageToSend.hopAddress);
             self.ackAttempts = 0;
             self.packageToSend = null;
@@ -379,9 +390,9 @@ export class ChatComponent implements OnInit {
   redirectRouteRequest(req: RREQ) {
     const self = this;
     setTimeout(function () {
-      req.prevHopAddress = self.loraSetting.address;
       req.hopCount = req.hopCount + 1;
       RoutingService.addReverseRoutingTableItem(req);
+      req.prevHopAddress = self.loraSetting.address;
       self.sendMessageToNode(req.toBase64String());
       console.log('Info: redirect route request for destination ' + req.destAddress + '.');
     }, this.randomNum());
@@ -450,8 +461,10 @@ export class ChatComponent implements OnInit {
 
     for (let i = 0; i < errs.length; i++) {
       setTimeout(() => {
+        if (errs[i].hopAddress !== 0 ) {
           this.sendMessageToNode(errs[i].toBase64String());
           console.log('Info: send error notification to ' + errs[i].hopAddress + '.');
+        }
         },
         (i + 1) * 1500); // sende alle 1.5 sekunden
     }

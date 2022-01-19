@@ -67,7 +67,7 @@ export class RoutingService {
     tmp.destination = req.destAddress;
     tmp.source = req.originAddress;
     tmp.requestId = req.requestId;
-    tmp.previousHop = req.hopAddress;
+    tmp.previousHop = req.prevHopAddress;
     this.reverseRoutingTable.push(tmp);
     console.log('Info: reverse routing table item (ID: ' + req.requestId + ') was created.');
   }
