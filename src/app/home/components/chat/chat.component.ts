@@ -440,7 +440,7 @@ export class ChatComponent implements OnInit {
           tmp.paths.push(tmpPath);
         }
         tmp.pathCount = tmp.paths.length;
-        if (tmp.hopAddress !== this.loraSetting.address) {
+        if (tmp.hopAddress !== this.loraSetting.address && tmp.hopAddress !== 0) {
           errs.push(tmp);
         }
       }
@@ -484,14 +484,17 @@ export class ChatComponent implements OnInit {
 
   removeReverseRoutingItem(item: ReverseRoutingTableItem) {
     RoutingService.removeReverseRoutingTableItem(item.requestId, item.destination);
+    this.changeDetection.detectChanges();
   }
 
   removeRoutingItem(item: RoutingTableItem) {
     RoutingService.removeRoutingTableItem(item.destination);
+    this.changeDetection.detectChanges();
   }
 
   removeWaitForRouteItem(item: WaitForRoute) {
     this.waitForRoute = this.waitForRoute.filter(i => i.routeRequest.requestId !== item.routeRequest.requestId);
+    this.changeDetection.detectChanges();
   }
 
   printTestData() {

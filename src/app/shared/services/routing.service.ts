@@ -88,6 +88,7 @@ export class RoutingService {
   static getReverseRoute(ori: number) {
     return RoutingService.reverseRoutingTable.find(item => item.source === ori);
   }
+
   static invalidateRoute(ori: number) {
     if (RoutingService.routingTable.find(item => item.destination === ori)) {
       RoutingService.routingTable.find(item => item.destination === ori).isValid = false;
